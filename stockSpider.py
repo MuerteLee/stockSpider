@@ -34,24 +34,23 @@ class sqliteOS3(object):
 
         cu = conn.cursor(); 
         cmdLineInsert = "insert into stockSpider values((select max(ID) from stockSpider)+1," + self.symbol + "," + self.name + "," + self.cnt_r0x_ratio + "," + self.trade + "," + self.changeratio + "," + self.turnover + "," + self.amount + "," + self.netamount + "," + self.ratioamount + "," + self.r0_net + "," + self.r0x_ratio + ")"
-        print(cmdLineInsert)
+        print("Update new data: %s" %cmdLineInsert)
         cu.execute(cmdLineInsert)
         conn.commit()
     #need to update the stock data for had chanaged stock data.
     def updateStockSpiderData(self, conn, symbol, cnt_r0x_ratio, trade, changeratio, turnover, amount,netamount, ratioamount, r0_net, r0x_ratio):
-        print(changeratio)
         cur = conn.cursor()
         try:
-#            cur.execute("UPDATE stockSpider SET cnt_r0x_ratio=%s where symbol='%s'" %((cnt_r0x_ratio), symbol));
-#            cur.execute("UPDATE stockSpider SET trade=%s where symbol='%s'" %((trade), symbol));
-#            cur.execute("UPDATE stockSpider SET changeratio=%s where symbol='%s'" %((changeratio), symbol));
-#            cur.execute("UPDATE stockSpider SET turnover=%s where symbol='%s'" %((turnover), symbol));
-#            cur.execute("UPDATE stockSpider SET amount=%s where symbol='%s'" %((amount),symbol));
-#            cur.execute("UPDATE stockSpider SET netamount=%s where symbol='%s'" %((netamount), symbol));
-#            cur.execute("UPDATE stockSpider SET ratioamount=%swhere symbol='%s'" %((ratioamount), symbol));
-#            cur.execute("UPDATE stockSpider SET r0_net=%s where symbol='%s'" %((r0_net), symbol));
-#            cur.execute("UPDATE stockSpider SET r0x_ratioamount=%s where symbol='%s'" %((r0x_ratio), symbol));
-            cur.execute("UPDATE stockSpider SET cnt_r0x_ratio=%s trade=%s changeratio=%s turnover=%s amount=%s netamount=%s ratioamount=%s r0_net=%s r0x_ratioamount=%s where symbol='%s'" %(locale.atof(cnt_r0x_ratio), locale.atof(trade), locale.atof(changeratio), locale.atof(turnover), locale.atof(amount), locale.atof(netamount), locale.atof(ratioamount), locale.atof(r0_net), locale.atof(r0x_ratio), symbol));
+            cur.execute("UPDATE stockSpider SET cnt_r0x_ratio=%s where symbol='%s'" %((cnt_r0x_ratio), symbol));
+            cur.execute("UPDATE stockSpider SET trade=%s where symbol='%s'" %((trade), symbol));
+            cur.execute("UPDATE stockSpider SET changeratio=%s where symbol='%s'" %((changeratio), symbol));
+            cur.execute("UPDATE stockSpider SET turnover=%s where symbol='%s'" %((turnover), symbol));
+            cur.execute("UPDATE stockSpider SET amount=%s where symbol='%s'" %((amount),symbol));
+            cur.execute("UPDATE stockSpider SET netamount=%s where symbol='%s'" %((netamount), symbol));
+            cur.execute("UPDATE stockSpider SET ratioamount=%swhere symbol='%s'" %((ratioamount), symbol));
+            cur.execute("UPDATE stockSpider SET r0_net=%s where symbol='%s'" %((r0_net), symbol));
+            cur.execute("UPDATE stockSpider SET r0x_ratioamount=%s where symbol='%s'" %((r0x_ratio), symbol));
+#            cur.execute("UPDATE stockSpider SET cnt_r0x_ratio=%s trade=%s changeratio=%s turnover=%s amount=%s netamount=%s ratioamount=%s r0_net=%s r0x_ratioamount=%s where symbol='%s'" %(locale.atof(cnt_r0x_ratio), locale.atof(trade), locale.atof(changeratio), locale.atof(turnover), locale.atof(amount), locale.atof(netamount), locale.atof(ratioamount), locale.atof(r0_net), locale.atof(r0x_ratio), symbol));
             conn.commit()
         except sqlite3.Error as e:
             print("ERROR: updateSendKeyValue error, please check your param! \n")
@@ -79,6 +78,16 @@ class sqliteOS3(object):
             print("ERROR: searchStockSpiderSqlite3 error, please check your param! \n")
             return False;
 
+    def deleteUpdateData(self, conn, symbol):
+        cur = conn.cursor()
+        try:
+            cur.execute("delete from stockSpider where symbol='%s'" %symbol)
+            conn.commit()
+            return True;
+        except sqlite3.Error as e:
+            print("ERROR: deleteUpdatedata error, please check your param! \n")
+            conn.rollback()
+            return False;
     def closeSqlite3(self, conn):
         conn.close()
 
@@ -100,16 +109,17 @@ class parseUrl(sqliteOS3):
             if sql.searchStockSpiderSqlite3(conn, list['symbol']):
                 sql.insertData(conn, '"'+list['symbol']+'"', '"'+list['name']+'"', list['cnt_r0x_ratio'], list['trade'], list['changeratio'], list['turnover'], list['amount'], list['netamount'],list['ratioamount'], str(locale.atof(list['r0_net'])), str(locale.atof(list['r0x_ratio'])))
             if locale.atof(list['amount']) != locale.atof(sql.searchStockSpiderAmount(conn, list['symbol'])):
-                sql.updateStockSpiderData(conn,list['symbol'], list['cnt_r0x_ratio'], list['trade'], list['changeratio'], list['turnover'], list['amount'], list['netamount'],list['ratioamount'], list['r0_net'], list['r0x_ratio']);
+                if sql.deleteUpdateData(conn,list['symbol']):
+                    sql.insertData(conn, '"'+list['symbol']+'"', '"'+list['name']+'"', list['cnt_r0x_ratio'], list['trade'], list['changeratio'], list['turnover'], list['amount'], list['netamount'],list['ratioamount'], str(locale.atof(list['r0_net'])), str(locale.atof(list['r0x_ratio'])))
+#                sql.updateStockSpiderData(conn,list['symbol'], list['cnt_r0x_ratio'], list['trade'], list['changeratio'], list['turnover'], list['amount'], list['netamount'],list['ratioamount'], list['r0_net'], list['r0x_ratio']);
 
         sql.closeSqlite3(conn); 
 if __name__ == "__main__":
 #    parseUrl("http://data.eastmoney.com/bkzj/hy.html");
     dataBasePath = "/home/muerte/stockSpider.db"
     for pageNum in range(1, 13):
-        print(pageNum)
         url = "http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_lxjlr?page="+str(pageNum)+"&num=20&sort=cnt_r0x_ratio&asc=0&bankuai="
-        print(url)
+        print("Parese new URL%d: %s" %(pageNum,url))
         stock = parseUrl(url, dataBasePath);
         stock.optionData()
 
