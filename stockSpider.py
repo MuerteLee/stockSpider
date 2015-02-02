@@ -36,7 +36,7 @@ class sqliteOS3(object):
         print(cmdLineInsert)
         cu.execute(cmdLineInsert)
         conn.commit()
-    #need to update the stock data for had chanaged.
+    #need to update the stock data for had chanaged stock data.
     def updateStockSpiderData(self, conn, symbol):
         cur = conn.cursor()
         try:
@@ -82,7 +82,7 @@ class parseUrl(sqliteOS3):
         sql.closeSqlite3(conn); 
 if __name__ == "__main__":
 #    parseUrl("http://data.eastmoney.com/bkzj/hy.html");
-    dataBasePath = "/home/muerte/stockSpider.db"
+    dataBasePath = "/home/licaijun/stockSpider.db"
     stock = parseUrl("http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_lxjlr?page=1&num=20&sort=cnt_r0x_ratio&asc=0&bankuai=", dataBasePath);
     stock.optionData()
 
