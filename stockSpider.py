@@ -91,6 +91,17 @@ class sqliteOS3(object):
             return False;
     def closeSqlite3(self, conn):
         conn.close()
+class praseUrlStock(object):
+    def __init__(self, URL):
+        super.__init__(self, URL) 
+        headers = ('User-Agent','Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11')
+        opener = urllib.request.build_opener()
+        opener.addheaders = [headers]
+        data = opener.open(URL).read()
+        self.stockData = data.decode("GB2312").strip('[').strip(']').replace('},','}},').split('},');
+
+    def stockData(self,):
+        return eval(self.stockData.replace('{','{"').replace(':', '":').replace(',',',"'))
 
 class parseUrl(sqliteOS3):
     def __init__(self, URL, dataBasePath):
@@ -118,7 +129,7 @@ class parseUrl(sqliteOS3):
         sql.closeSqlite3(conn); 
 if __name__ == "__main__":
 #    parseUrl("http://data.eastmoney.com/bkzj/hy.html");
-    dataBasePath = "/home/muerte/stockSpider.db"
+    dataBasePath = "/tmp/stockSpider.db"
     for pageNum in range(1, 132):
         url = "http://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_lxjlr?page="+str(pageNum)+"&num=20&sort=cnt_r0x_ratio&asc=0&bankuai="
         print("Parese new URL%d: %s" %(pageNum,url))
