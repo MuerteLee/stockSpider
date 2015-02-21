@@ -55,12 +55,20 @@ class dataBase(object):
 
     def searchStockFilterResult(self,conn):
         cur = conn.cursor()
+        ll = []
+        lll = []
+        cmdLine = "select stockID, name from stockFilter where limitUpNum >= 2"
+        print(cmdLine)
         try:
-            cur.execute("select * from stockFilter where limitUpNum >= 2")
-            if len(cur.fetchall()) == 0:
-                return cur.fetchall();
+            cur.execute(cmdLine)
+            ll = cur.fetchall()
+            for i in ll:
+                lll.append(str(i).replace('(','').replace(')','').replace(',',''))
+
+            if cur.fetchall() == 0:
+                return None;
             else:
-                return False;
+               return lll 
         except sqlite3.Error as e:
             print("ERROR: searchStockFilterResult error, please check your param! \n")
             return False;
@@ -147,7 +155,8 @@ if __name__ == "__main__":
 #    print(pp)
     pp = []
 
-    for i in range (1, 2): # parseUrl(url).getPagesNum()+1):
+#    for i in range (1, 2): # parseUrl(url).getPagesNum()+1):
+    for i in range (1, parseUrl(url).getPagesNum()+1):
         urlStr = urlS + str(i) + urlE
         print(urlStr)
         parseData = parseUrl(urlStr).getData()
@@ -159,10 +168,14 @@ if __name__ == "__main__":
                 parseDataTmp[1] = "sz"+parseDataTmp[1]
  
             del parseDataTmp[0]
-            urlT = urlTmp + parseDataTmp[0]
+            if parseDataTmp[0] == 'sh603799':
+                continue
+            else:
+                urlT = urlTmp + parseDataTmp[0]
+            print(urlT)
             pp = getPageCount(urlT).getPricePercent()
             parseDataTmp = parseDataTmp + pp;
             print(parseDataTmp) 
             option(parseDataTmp,dataBasePath).insertStockData();
 
-    option(parseDataTmp,dataBasePath).searchStockFilterResult();
+    option(parseDataTmp,dataBasePath).returnFilter();
