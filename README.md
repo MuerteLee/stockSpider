@@ -7,3 +7,9 @@ http://data.eastmoney.com/zjlx/detail.html
 http://nufm.dfcfw.com/EM_Finance2014NumericApplication/JS.aspx/JS.aspx?type=ct&st=%28BalFlowMain%29&sr=-1&p=2&ps=50&js=var%20pglwSLMJ={pages:%28pc%29,date:%222015-01-13%22,data:%5B%28x%29%5D}&token=894050c76af8597a853f5b408b759f5d&cmd=C._AB&sty=DCFFITA&rt=47466059
 http://bbs.10jqka.com.cn/codelist.html#sz
 http://app.finance.ifeng.com/data/stock/tab_cccb.php?code=sh600497
+
+
+2015-3-4
+money.finance.sina.com.cn/corp/go.php/vMS_MarketHistory/stockid/000028.phtml?year=2015&jidu=1
+http://blog.sina.com.cn/s/articlelist_2127818045_10_1.html
+http://xueqiu.com/hq#exchange=CN&firstName=1&secondName=1_0&order=asc&orderby=percent&page=40
