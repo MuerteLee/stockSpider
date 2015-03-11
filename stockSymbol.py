@@ -1,4 +1,5 @@
 import urllib
+import datetime
 from urllib import request
 import sqlite3
 import re, time,os 
@@ -7,19 +8,17 @@ class dataBaseOperator(object):
     def __init__(self,conn, tableName):
         self.conn = conn;
         self.tableName =  tableName
-        self.cur = self.conn.cursor()
+        self.cu = self.conn.cursor()
 
     def searchStockTable(self,):
         cmdLine = "SELECT COUNT(*) FROM sqlite_master where type='table' and name=" + "'" + self.tableName + "'"
         try:
-            self.cur.execute(cmdLine)
-            lenS = int (str(self.cur.fetchall()[0]).replace('(','').replace(",)",""))
+            self.cu.execute(cmdLine)
+            lenS = int (str(self.cu.fetchall()[0]).replace('(','').replace(",)",""))
             if lenS == 1:
                 return True;
             else:
-                print("False\n")
-                return False;
-
+                return False; 
         except sqlite3.Error as e:
             print("ERROR: searchStockTable error in the dataBaseOperator, please check your param! \n")
             return False;
@@ -65,17 +64,51 @@ class dataBase(object):
             print("ERROR: searchStockFilterSqlite3 error, please check your param! \n")
             return False;
 
-class dataBase4Stock(object):
+class spiderStockPrice(object):
+    def __init__(self,stockSymbol, Year, Quarter):
+        self.stcokSymbol = "".join(str(i) for i in [int(s) for s in stockSymbol if s.isdigit()])
+#        URL="http://money.finance.sina.com.cn/corp/go.php/vMS_MarketHistory/stockid/000028.phtml?year=2015&jidu=1"
+        URL="http://money.finance.sina.com.cn/corp/go.php/vMS_MarketHistory/stockid/"+str(self.stcokSymbol)+".phtml?year="+str(Year)+"&jidu="+str(Quarter)
+        print(URL)
+        headers = ('User-Agent','Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.11 (KHTML, like Gecko) Chrome/23.0.1271.64 Safari/537.11');
+        opener = urllib.request.build_opener();
+        opener.addheaders = [headers];
+        data = opener.open(URL).read();
+        self.mainData = data.decode("GBK").split('<a target=\'_blank\' href=')[1:];
+    
+    def getPriceTimeURL(self,):
+        PTR=[]
+        PTRT=[]
+        # whole data for day
+        #print(str(self.mainData[0]).replace('\t','').replace('\r\n','').split('</tr>')[0])
+        # the latest data
+        #str(self.mainData[0]).replace('\t','').replace('\r\n','').split('</tr>')[0].split('<td class="tdr">')[0].replace('</div></td>','').split('<td><div align="center">');
+        for i in range(0, len(self.mainData)):
+            dataT = str(self.mainData[i]).replace('\t','').replace('\r\n','').split('</tr>')[0].split('<td class="tdr">')[0].replace('</div></td>','').split('<td><div align="center">');
+            price = dataT[-1]
+            dataTU = str(dataT[0]).strip('\'').strip('</a>').split('\'>')
+            time = dataTU[1]
+            URL = dataTU[0]
+            PTRT.append(time)
+            PTRT.append(price)
+            PTRT.append(URL)
+            PTR.append(PTRT)
+            PTRT=[]
+        return PTR
+
+class dataBase4Stock(dataBase):
     def __init__(self, dataBasePath,stockSymbol):
         dataBase.__init__(self, dataBasePath);
         self.dataBasePath = dataBasePath;
         self.stockSymbol = stockSymbol
         sql = dataBase(self.dataBasePath) 
         conn = sql.connectData()
+        self.conn = conn
+        cu = conn.cursor()
+        self.cu = cu
     
         if not dataBaseOperator(conn, stockSymbol).searchStockTable(): 
-           cu = conn.cursor()
-           cmdLine = "create table " + self.stockSymbol + "(id integer primary key autoincrement, time varchar(128) UNIQUE, price float)"
+           cmdLine = "create table " + self.stockSymbol + "(id integer primary key autoincrement, time varchar(128) UNIQUE, price float, URL varchar(128) UNIQUE)"
            print(cmdLine)
            try:
                 cu.execute(cmdLine)
@@ -83,14 +116,38 @@ class dataBase4Stock(object):
                 print("Please check dataBase4Stock!\n")
            conn.close()  
 
-    def insert4Stock(self, date, price):
+    def searchStock(self,time):
+        lll = []
+        cmdLine = "select time from "+stockSymbol+" where time='"+time+"'"
+        print(cmdLine)
+        try:
+            self.cu.execute(cmdLine)
+            if len(self.cu.fetchall()) != 0:
+                ll = str(self.cu.fetchall()[0]).replace('(\'','').replace("',)","")
+                lll.append("".join(str(i) for i in [int(s) for s in ll if s.isdigit()]))
+            if len(lll) > 0:
+                return True;
+            else:
+                return False;
+        except sqlite3.Error as e:
+            print("ERROR: searchStock error, please check your param! \n")
+            return False;
+
+    def insert4Stock(self, date, price, URL):
         self.date = date;
         self.price = price;
-
-        cmdLineInsert = "insert into " + self.stockSymbol +" values((select max(ID) from " + self.stockSymbol + ")+1," + '"' + self.date + '"' + "," + '"' + self.price + ")"
+        self.url = URL;
+        
+        cmdLineInsert = "insert into " + self.stockSymbol +" values((select max(ID) from " + self.stockSymbol + ")+1," + '"' + self.date + '"' + "," + '"' + self.price + '"' + "," + '"' + self.url + '"' + ")"
         print("Insert stock data: %s" %cmdLineInsert)
-        self.cu.execute(cmdLineInsert)
-        self.conn.commit()
+
+        if not self.searchStock(date):
+            try:
+                time.sleep(1)
+                self.cu.execute(cmdLineInsert)
+                self.conn.commit()
+            except:
+                print("Please check insert4Stock!\n")
 
 class option(dataBase):
     def __init__(self, data, dataBasePath):
@@ -134,9 +191,20 @@ if __name__ == "__main__":
 #    print(getPageCount(urlTT).getPricePercent())
 #    print(pp)
     pp = []
+    timeD = time.strftime('%Y-%m-%d',time.localtime(time.time())).split('-')
+    timeDY = datetime.date.today()-datetime.timedelta(days=1)
 
-    for i in range (1, 2): # parseUrl(url).getPagesNum()+1):
-#    for i in range (1, parseUrl(url).getPagesNum()+1):
+    if int(timeD[1]) >=2 and int(timeD[1]) <=4:
+        Quarter = 1
+    elif int(timeD[1]) >=5 and int(timeD[1]) <=7:
+        Quarter = 2
+    elif int(timeD[1]) >=8 and int(timeD[1]) <=10:
+        Quarter = 3
+    elif int(timeD[1]) ==1 or int(timeD[1]) > 10:
+        Quarter = 4
+
+#    for i in range (1, 2): # parseUrl(url).getPagesNum()+1):
+    for i in range (1, parseUrl(url).getPagesNum()+1):
         urlStr = urlS + str(i) + urlE
         print(urlStr)
         if i / 20 == 0:
@@ -155,8 +223,22 @@ if __name__ == "__main__":
 
             option(parseDataTmp,dataBasePath).insertStockData();
 
-            sql = dataBase(dataBasePath) 
-            conn = sql.connectData()
+#            sql = dataBase(dataBasePath) 
+#            conn = sql.connectData()
+
             stockSymbol = parseDataTmp[0]
 
-            dataBase4Stock(dataBasePath, stockSymbol)
+            for y in range(int(timeD[0])-1, int(timeD[0]) + 1):
+                if y == int(timeD[0]):
+                   QuarterStart = 1;
+                   QuarterStop = Quarter + 1
+                elif y < int(timeD[0]):
+                   QuarterStart = Quarter;
+                   QuarterStop = 5 
+
+                for m in range(QuarterStart, QuarterStop):
+                    kAcount = spiderStockPrice(stockSymbol,y,m).getPriceTimeURL()
+                    time.sleep(5)
+                    for k in range(0,len(kAcount)):
+                        if kAcount[k][1]:
+                            dataBase4Stock(dataBasePath, stockSymbol).insert4Stock(kAcount[k][0],kAcount[k][1],kAcount[k][2])
