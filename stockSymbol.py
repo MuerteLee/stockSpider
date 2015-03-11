@@ -112,6 +112,7 @@ class dataBase4Stock(dataBase):
            print(cmdLine)
            try:
                 cu.execute(cmdLine)
+                time.sleep(1)
            except sqlite3.Error as e:
                 print("Please check dataBase4Stock!\n")
            conn.close()  
@@ -132,6 +133,7 @@ class dataBase4Stock(dataBase):
         except sqlite3.Error as e:
             print("ERROR: searchStock error, please check your param! \n")
             return False;
+        self.conn.close()  
 
     def insert4Stock(self, date, price, URL):
         self.date = date;
