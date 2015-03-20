@@ -112,26 +112,31 @@ class dataBase4Stock(dataBase):
            print(cmdLine)
            try:
                 cu.execute(cmdLine)
-                time.sleep(1)
+#                time.sleep(1)
            except sqlite3.Error as e:
                 print("Please check dataBase4Stock!\n")
-           conn.close()  
+#           conn.close()  
 
     def searchStock(self,time):
         lll = []
+        l1 = []
         cmdLine = "select time from "+stockSymbol+" where time='"+time+"'"
         print(cmdLine)
         try:
             self.cu.execute(cmdLine)
-            if len(self.cu.fetchall()) != 0:
-                ll = str(self.cu.fetchall()[0]).replace('(\'','').replace("',)","")
-                lll.append("".join(str(i) for i in [int(s) for s in ll if s.isdigit()]))
-            if len(lll) > 0:
+            l1 = self.cu.fetchall()
+#            print(l1, len(l1))
+#            print(self.cu.fetchall())
+#            print(len(self.cu.fetchall()[0]))
+#            if len(self.cu.fetchall()) != 0:
+#                ll = str(self.cu.fetchall()[0]).replace('(\'','').replace("',)","")
+#                lll.append("".join(str(i) for i in [int(s) for s in ll if s.isdigit()]))
+            if len(l1) > 0:
                 return True;
             else:
                 return False;
         except sqlite3.Error as e:
-            print("ERROR: searchStock error, please check your param! \n")
+            print("ERROR: searchStock error -------->>>>>>>, please check your param! \n")
             return False;
         self.conn.close()  
 
@@ -145,7 +150,7 @@ class dataBase4Stock(dataBase):
 
         if not self.searchStock(date):
             try:
-                time.sleep(1)
+#                time.sleep(1)
                 self.cu.execute(cmdLineInsert)
                 self.conn.commit()
             except:
@@ -183,6 +188,49 @@ class parseUrl(object):
     def getData(self,):
         return self.data;
 
+class other(object):
+    def __init__(self,):
+        pass;
+
+    def getQuarter(self, time):
+        if time >=2 and time <=4:
+            Quarter = 1
+        elif time >=5 and time <=7:
+            Quarter = 2
+        elif time >=8 and time <=10:
+            Quarter = 3
+        elif time ==1 or time > 10:
+            Quarter = 4
+        return Quarter;
+
+    def searchMaxTimeStock(self,dataBasePath,stockSymbol):
+        sql = dataBase(dataBasePath) 
+        conn = sql.connectData()
+        self.conn = conn
+        cu = conn.cursor()
+        self.cu = cu
+        l1 = []
+
+        cmdLine = "select max(time) from "+stockSymbol
+        try:
+            self.cu.execute(cmdLine)
+#            l1 = self.cu.fetchall()
+            l1 = (str(self.cu.fetchall()[0]).replace('(','').replace(",)","").replace("'",''))
+            if len(l1) > 0:
+                return l1;
+            else:
+                return False;
+        except sqlite3.Error as e:
+            print("ERROR: searchMaxTimeStock error, please check your param! \n")
+            return False;
+        self.conn.close()  
+
+    def cmp(self, s1, s2):
+        s1 = str(s1).split('-')
+        if int(s1[0]) == int(s2[0]) and int(s1[1]) == int(s2[1]) and int(s1[2]) == int(s2[2]): 
+            return True
+        return False
+
 if __name__ == "__main__":
     dataBasePath = "./.stockMain.db"
     url = "http://nufm.dfcfw.com/EM_Finance2014NumericApplication/JS.aspx/JS.aspx?type=ct&st=%28BalFlowMain%29&sr=-1&p=1&ps=50&js=var%20pglwSLMJ={pages:%28pc%29,date:%222014-10-22%22,data:%5B%28x%29%5D}&token=894050c76af8597a853f5b408b759f5d&cmd=C._AB&sty=DCFFITA&rt=47466059"
@@ -195,15 +243,20 @@ if __name__ == "__main__":
     pp = []
     timeD = time.strftime('%Y-%m-%d',time.localtime(time.time())).split('-')
     timeDY = datetime.date.today()-datetime.timedelta(days=1)
+    timeN = int(time.strftime('%H:%M:%S',time.localtime(time.time())).split(':')[0])
+    if timeN >= 16:
+        timeC = timeD
+    else:
+        timeC = timeDY
 
-    if int(timeD[1]) >=2 and int(timeD[1]) <=4:
-        Quarter = 1
-    elif int(timeD[1]) >=5 and int(timeD[1]) <=7:
-        Quarter = 2
-    elif int(timeD[1]) >=8 and int(timeD[1]) <=10:
-        Quarter = 3
-    elif int(timeD[1]) ==1 or int(timeD[1]) > 10:
-        Quarter = 4
+    timeTT = int(timeD[1])
+    oth = other()
+    Quarter = oth.getQuarter(timeTT);
+    QuarterT = Quarter
+    startYear = int(timeD[0]) - 1
+    stopYear = int(timeD[0]) + 1
+
+    maxT = False
 
 #    for i in range (1, 2): # parseUrl(url).getPagesNum()+1):
     for i in range (1, parseUrl(url).getPagesNum()+1):
@@ -212,7 +265,7 @@ if __name__ == "__main__":
         if i / 20 == 0:
             time.sleep(5)
         parseData = parseUrl(urlStr).getData()
-        time.sleep(1)
+#        time.sleep(1)
         for i in range(0, len(parseData)):
             parseDataTmp = parseData[i].split(',')[:5];
 #            print(parseDataTmp)
@@ -230,17 +283,45 @@ if __name__ == "__main__":
 
             stockSymbol = parseDataTmp[0]
 
-            for y in range(int(timeD[0])-1, int(timeD[0]) + 1):
-                if y == int(timeD[0]):
-                   QuarterStart = 1;
-                   QuarterStop = Quarter + 1
-                elif y < int(timeD[0]):
-                   QuarterStart = Quarter;
-                   QuarterStop = 5 
+
+            timeDN = oth.searchMaxTimeStock(dataBasePath, stockSymbol)
+            
+
+            if timeDN: 
+                print("max Time is %s" %timeDN)
+                if oth.cmp(timeDN,timeC):
+                    break;
+                timeDN = timeDN.split('-')
+                QuarterT = oth.getQuarter(int(timeDN[1]))
+                startYear = int(str(timeDN[0]).replace("'",''));
+                maxT = True
+
+            for y in range(startYear, stopYear):
+                if y == stopYear - 1:
+                   if not maxT:
+                        QuarterStart = 1;
+                        QuarterStop = Quarter + 1
+                   else:
+                        QuarterStart = QuarterT;
+                        QuarterStop = Quarter + 1
+                elif y < stopYear - 1:
+                   if not maxT:
+                        QuarterStart = Quarter;
+                        QuarterStop = 5 
+                   else:
+                        QuarterStart = QuarterT;
+                        QuarterStop = 5 
+                print(startYear, stopYear, QuarterStart, QuarterStop)
 
                 for m in range(QuarterStart, QuarterStop):
                     kAcount = spiderStockPrice(stockSymbol,y,m).getPriceTimeURL()
-                    time.sleep(5)
+#                    time.sleep(5)
+
                     for k in range(0,len(kAcount)):
+                        if timeDN:
+                            if oth.cmp(kAcount[k][0],timeDN):
+                                break;
+
                         if kAcount[k][1]:
                             dataBase4Stock(dataBasePath, stockSymbol).insert4Stock(kAcount[k][0],kAcount[k][1],kAcount[k][2])
+
