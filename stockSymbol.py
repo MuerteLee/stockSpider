@@ -2,8 +2,9 @@ import urllib
 import datetime
 from urllib import request
 import sqlite3
-import re, time,os 
-
+import re, time,os,sys
+def getLineNum():
+    return sys._getframe().f_lineno
 class dataBaseOperator(object):
     def __init__(self,conn, tableName):
         self.conn = conn;
@@ -226,39 +227,22 @@ class other(object):
         self.conn.close()  
 
     def cmp(self, s1, s2):
-        s1 = str(s1).split('-')
+        if str(s1).find('-') != -1:
+            s1=str(s1).split('-')
+        if str(s2).find('-') != -1:
+            s2=str(s2).split('-')
+#        print("wo cao %s %s" %(s1,s2))
+#        print(s1[0],s1[1],s1[2],s2[0],s2[1],s2[2])
         if int(s1[0]) == int(s2[0]) and int(s1[1]) == int(s2[1]) and int(s1[2]) == int(s2[2]): 
             return True
         return False
 
-if __name__ == "__main__":
-    dataBasePath = "./.stockMain.db"
+def insertMainTable(dataBasePath):
     url = "http://nufm.dfcfw.com/EM_Finance2014NumericApplication/JS.aspx/JS.aspx?type=ct&st=%28BalFlowMain%29&sr=-1&p=1&ps=50&js=var%20pglwSLMJ={pages:%28pc%29,date:%222014-10-22%22,data:%5B%28x%29%5D}&token=894050c76af8597a853f5b408b759f5d&cmd=C._AB&sty=DCFFITA&rt=47466059"
+
     urlS = "http://nufm.dfcfw.com/EM_Finance2014NumericApplication/JS.aspx/JS.aspx?type=ct&st=%28BalFlowMain%29&sr=-1&p="
     urlE = "&ps=50&js=var%20pglwSLMJ={pages:%28pc%29,date:%222014-10-22%22,data:%5B%28x%29%5D}&token=894050c76af8597a853f5b408b759f5d&cmd=C._AB&sty=DCFFITA&rt=47466059"
-    urlTmp = "http://app.finance.ifeng.com/data/stock/tab_cccb.php?code="#sh600050"
-#    urlTT = "http://app.finance.ifeng.com/data/stock/tab_cccb.php?code=sh600528"
-#    print(getPageCount(urlTT).getPricePercent())
-#    print(pp)
-    pp = []
-    timeD = time.strftime('%Y-%m-%d',time.localtime(time.time())).split('-')
-    timeDY = datetime.date.today()-datetime.timedelta(days=1)
-    timeN = int(time.strftime('%H:%M:%S',time.localtime(time.time())).split(':')[0])
-    if timeN >= 16:
-        timeC = timeD
-    else:
-        timeC = timeDY
 
-    timeTT = int(timeD[1])
-    oth = other()
-    Quarter = oth.getQuarter(timeTT);
-    QuarterT = Quarter
-    startYear = int(timeD[0]) - 1
-    stopYear = int(timeD[0]) + 1
-
-    maxT = False
-
-#    for i in range (1, 2): # parseUrl(url).getPagesNum()+1):
     for i in range (1, parseUrl(url).getPagesNum()+1):
         urlStr = urlS + str(i) + urlE
         print(urlStr)
@@ -278,6 +262,37 @@ if __name__ == "__main__":
 
             option(parseDataTmp,dataBasePath).insertStockData();
 
+if __name__ == "__main__":
+    dataBasePath = "./.stockMain.db"
+    urlTmp = "http://app.finance.ifeng.com/data/stock/tab_cccb.php?code="#sh600050"
+#    urlTT = "http://app.finance.ifeng.com/data/stock/tab_cccb.php?code=sh600528"
+#    print(getPageCount(urlTT).getPricePercent())
+#    print(pp)
+    pp = []
+    timeD = time.strftime('%Y-%m-%d',time.localtime(time.time())).split('-')
+    timeDY = datetime.date.today()-datetime.timedelta(days=1)
+    timeN = int(time.strftime('%H:%M:%S',time.localtime(time.time())).split(':')[0])
+    if timeN >= 16:
+        timeC = time.strftime('%Y-%m-%d',time.localtime(time.time()))
+    else:
+        timeC = timeDY
+    timeW = datetime.date.today().weekday()
+    if int(timeW) == 5:
+        timeC = datetime.date.today()-datetime.timedelta(days=1)
+    elif int(timeW) == 6:
+        timeC = datetime.date.today()-datetime.timedelta(days=2)
+
+    timeTT = int(timeD[1])
+    oth = other()
+    Quarter = oth.getQuarter(timeTT);
+    QuarterT = Quarter
+    startYear = int(timeD[0]) - 1
+    stopYear = int(timeD[0]) + 1
+
+    maxT = False
+
+#    for i in range (1, 2): # parseUrl(url).getPagesNum()+1):
+
 #            sql = dataBase(dataBasePath) 
 #            conn = sql.connectData()
 
@@ -288,10 +303,14 @@ if __name__ == "__main__":
             
 
             if timeDN: 
-                print("max Time is %s" %timeDN)
-                if oth.cmp(timeDN,timeC):
-                    break;
+                print("max Time is %s, the latest time is %s" %(timeDN,timeC))
                 timeDN = timeDN.split('-')
+#                print(oth.cmp(timeC, timeDN))
+#                print(timeC, timeDN)
+                if oth.cmp(timeC, timeDN):
+                    print('the date is latest!\n')
+                    break;
+
                 QuarterT = oth.getQuarter(int(timeDN[1]))
                 startYear = int(str(timeDN[0]).replace("'",''));
                 maxT = True
@@ -311,7 +330,7 @@ if __name__ == "__main__":
                    else:
                         QuarterStart = QuarterT;
                         QuarterStop = 5 
-                print(startYear, stopYear, QuarterStart, QuarterStop)
+#                print(startYear, stopYear, QuarterStart, QuarterStop)
 
                 for m in range(QuarterStart, QuarterStop):
                     kAcount = spiderStockPrice(stockSymbol,y,m).getPriceTimeURL()
