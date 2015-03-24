@@ -207,6 +207,18 @@ class others(object):
         if int(s1[0]) == int(s2[0]) and int(s1[1]) == int(s2[1]) and int(s1[2]) == int(s2[2]): 
             return True
         return False
+
+    def timeDf(self, s1, s2):
+        if str(s1).find('-') == -1 or str(s2).find('-') == -1:
+            return False
+        else:
+            s1 = int(str(s1).replace('-',''))
+            s2 = int(str(s2).replace('-',''))
+
+        if s1 >= s2:
+            return True
+        return False
+
     def timeCur(self,):
         timeDY = datetime.date.today()-datetime.timedelta(days=1)
         timeN = int(time.strftime('%H:%M:%S',time.localtime(time.time())).split(':')[0])
@@ -221,8 +233,66 @@ class others(object):
             timeC = datetime.date.today()-datetime.timedelta(days=2)
         return timeC;
 
+    def insertStockTable(dataBasePath,stockSymbol):
+        timeD = time.strftime('%Y-%m-%d',time.localtime(time.time())).split('-')
+
+        timeTT = int(timeD[1])
+        oth = other(dataBasePath)
+        oths = others()
+        timeC = oths.timeCur() 
+        Quarter = oths.getQuarter(timeTT);
+        QuarterT = Quarter
+        startYear = int(timeD[0]) - 1
+        stopYear = int(timeD[0]) + 1
+
+        maxT = False
+
+
+        if timeDN: 
+            print("max Time is %s, the latest time is %s" %(timeDN,timeC))
+            timeDN = timeDN.split('-')
+#            print(oth.cmp(timeC, timeDN))
+#            print(timeC, timeDN)
+            if oths.cmp(timeC, timeDN):
+                print('the date is latest!\n')
+                continue;
+
+            QuarterT = oths.getQuarter(int(timeDN[1]))
+            startYear = int(str(timeDN[0]).replace("'",''));
+            maxT = True
+
+        for y in range(startYear, stopYear):
+            if y == stopYear - 1:
+               if not maxT:
+                    QuarterStart = 1;
+                    QuarterStop = Quarter + 1
+               else:
+                    QuarterStart = QuarterT;
+                    QuarterStop = Quarter + 1
+            elif y < stopYear - 1:
+               if not maxT:
+                    QuarterStart = Quarter;
+                    QuarterStop = 5 
+               else:
+                    QuarterStart = QuarterT;
+                    QuarterStop = 5 
+    #        print(startYear, stopYear, QuarterStart, QuarterStop)
+
+            for m in range(QuarterStart, QuarterStop):
+                kAcount = spiderStockPrice(stockSymbol,y,m).getPriceTimeURL()
+#                time.sleep(5)
+
+                for k in range(0,len(kAcount)):
+                    if timeDN:
+                        if oths.cmp(kAcount[k][0],timeDN):
+                            break;
+
+                    if kAcount[k][1]:
+                        dataBase4Stock(dataBasePath, stockSymbol).insert4Stock(kAcount[k][0],kAcount[k][1],kAcount[k][2])
+
 class other(object):
-    def __init__(self,dataBasePath,):
+    def __init__(self,dataBasePath):
+        self.dataBasePath = dataBasePath
         sql = dataBase(dataBasePath) 
         conn = sql.connectData()
         self.conn = conn
@@ -245,16 +315,16 @@ class other(object):
             return False;
         self.conn.close()  
 
-    def searchStockMainTable(self,):
+    def searchStockMaxID(self,stockSymbol):
         try:
-            self.cu.execute("select max(ID) from stockMainTable")
+            self.cu.execute("select max(ID) from %s" %stockSymbol)
             l1 = (str(self.cu.fetchall()[0]).replace('(','').replace(",)","").replace("'",''))
             if int(l1) >= 0:
                 return int(l1);
             else:
                 return False;
         except sqlite3.Error as e:
-            print("ERROR: searchStockMainTable error, please check your param %s! \n" %sys._getframe().f_lineno)
+            print("ERROR: searchStockMaxID error, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
 
     def searchSymbolByID(self,ID):
@@ -266,35 +336,38 @@ class other(object):
             else:
                 return False;
         except sqlite3.Error as e:
-            print("ERROR: searchStockMainTable error, please check your param %s! \n" %sys._getframe().f_lineno)
+            print("ERROR:  searchSymbolByID error, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
 
-    def searchSymbolPrice(self,stockSymbol, id):
+    def searchSymbolPriceTime(self,stockSymbol, id):
         try:
-            self.cu.execute("select price from %s where id='%s'" %(stockSymbol,id))
-            l1 = (str(self.cu.fetchall()[0]).replace('(','').replace(",)","").replace("'",''))
+            self.cu.execute("select price,time from %s where id='%s'" %(stockSymbol,id))
+            l1 = (str(self.cu.fetchall()[0]).replace('(','').replace(",)","").replace("'",'').replace(')','').strip().split(','))
+            print(l1)
             if len(l1) >= 0:
                 return l1;
             else:
                 return False;
         except sqlite3.Error as e:
-            print("ERROR: searchSymbolPrice error, please check your param %s! \n" %sys._getframe().f_lineno)
+            print("ERROR: searchSymbolPriceTime error, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
 # need to write something
     def searchHalfYearMaxValue(self,stockSymbol):
+        oths = others()
+        timeC = oths.timeCur();
+        maxTime = self.searchMaxTimeStock(stockSymbol)
+        maxID = self.searchStockMaxID(stockSymbol);
+        maxPrice = float(self.searchSymbolPriceTime(stockSymbol, 1)[0])
+        pt=[]
         try:
-            self.cu.execute("select max(ID) from %s" %stockSymbol)
-            maxID = (str(self.cu.fetchall()[0]).replace('(','').replace(",)","").replace("'",''))
-            maxPrice = int(self.searchSymbolPrice(stockSymbol, 1))
-            for id in range(2,maxID+1):
-                if maxPrice < int(self.searchSymbolPrice(stockSymbol, id))
-                    maxPrice = int(self.searchSymbolPrice(stockSymbol, id))
-                
-
-            if len(l1) >= 0:
-                return l1;
+            if oths.timeDf(timeC, maxTime):
+                for id in range(2,maxID+1):
+                    if maxPrice < int(self.searchSymbolPrice(stockSymbol, id)):
+                        maxPrice = int(self.searchSymbolPrice(stockSymbol, id))
             else:
-                return False;
+                oths.insertStockTable(self.dataBasePath,stockSymbol)
+                self.searchHalfYearMaxValue(stockSymbol)
+            return maxPrice
         except sqlite3.Error as e:
             print("ERROR: searchHalfYearMaxValue error, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
@@ -339,11 +412,12 @@ def insertAllStockTable(dataBasePath):
 
     maxT = False
 
-    maxID = oth.searchStockMainTable();
+    maxID = oth.searchStockMaxID('stockMainTable');
     for i in range(1, maxID+1):
         stockSymbol = oth.searchSymbolByID(int(i));
         timeDN = oth.searchMaxTimeStock(stockSymbol)
-
+        print(oth.searchSymbolPrice(stockSymbol,1))
+        ooooo
         if timeDN: 
             print("max Time is %s, the latest time is %s" %(timeDN,timeC))
             timeDN = timeDN.split('-')
