@@ -21,7 +21,7 @@ class dataBaseOperator(object):
             else:
                 return False; 
         except sqlite3.Error as e:
-            print("ERROR: searchStockTable error in the dataBaseOperator, please check your param! \n")
+            print("ERROR: searchStockTable error in the dataBaseOperator, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
 
     def insertMainTableData(self, name, priceCur, price41MH, price46MH, price452WH, price452WL):
@@ -62,7 +62,7 @@ class dataBase(object):
             else:
                 return False;
         except sqlite3.Error as e:
-            print("ERROR: searchStockFilterSqlite3 error, please check your param! \n")
+            print("ERROR: searchStockFilterSqlite3 error, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
 
 class spiderStockPrice(object):
@@ -115,29 +115,22 @@ class dataBase4Stock(dataBase):
                 cu.execute(cmdLine)
 #                time.sleep(1)
            except sqlite3.Error as e:
-                print("Please check dataBase4Stock!\n")
+                print("Please check dataBase4Stock %s! \n" %sys._getframe().f_lineno)
 #           conn.close()  
 
-    def searchStock(self,time):
-        lll = []
+    def searchStock(self, time):
         l1 = []
-        cmdLine = "select time from "+stockSymbol+" where time='"+time+"'"
-        print(cmdLine)
+        cmdLine = "select time from "+self.stockSymbol+" where time='"+time+"'"
+#        print(cmdLine)
         try:
             self.cu.execute(cmdLine)
             l1 = self.cu.fetchall()
-#            print(l1, len(l1))
-#            print(self.cu.fetchall())
-#            print(len(self.cu.fetchall()[0]))
-#            if len(self.cu.fetchall()) != 0:
-#                ll = str(self.cu.fetchall()[0]).replace('(\'','').replace("',)","")
-#                lll.append("".join(str(i) for i in [int(s) for s in ll if s.isdigit()]))
             if len(l1) > 0:
                 return True;
             else:
                 return False;
         except sqlite3.Error as e:
-            print("ERROR: searchStock error -------->>>>>>>, please check your param! \n")
+            print("ERROR: searchStock error -------->>>>>>>, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
         self.conn.close()  
 
@@ -190,8 +183,12 @@ class parseUrl(object):
         return self.data;
 
 class other(object):
-    def __init__(self,):
-        pass;
+    def __init__(self,dataBasePath,):
+        sql = dataBase(dataBasePath) 
+        conn = sql.connectData()
+        self.conn = conn
+        cu = conn.cursor()
+        self.cu = cu
 
     def getQuarter(self, time):
         if time >=2 and time <=4:
@@ -204,14 +201,8 @@ class other(object):
             Quarter = 4
         return Quarter;
 
-    def searchMaxTimeStock(self,dataBasePath,stockSymbol):
-        sql = dataBase(dataBasePath) 
-        conn = sql.connectData()
-        self.conn = conn
-        cu = conn.cursor()
-        self.cu = cu
+    def searchMaxTimeStock(self,stockSymbol):
         l1 = []
-
         cmdLine = "select max(time) from "+stockSymbol
         try:
             self.cu.execute(cmdLine)
@@ -222,7 +213,7 @@ class other(object):
             else:
                 return False;
         except sqlite3.Error as e:
-            print("ERROR: searchMaxTimeStock error, please check your param! \n")
+            print("ERROR: searchMaxTimeStock error, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
         self.conn.close()  
 
@@ -236,6 +227,31 @@ class other(object):
         if int(s1[0]) == int(s2[0]) and int(s1[1]) == int(s2[1]) and int(s1[2]) == int(s2[2]): 
             return True
         return False
+
+
+    def searchStockMainTable(self,):
+        try:
+            self.cu.execute("select max(ID) from stockMainTable")
+            l1 = (str(self.cu.fetchall()[0]).replace('(','').replace(",)","").replace("'",''))
+            if int(l1) >= 0:
+                return int(l1);
+            else:
+                return False;
+        except sqlite3.Error as e:
+            print("ERROR: searchStockMainTable error, please check your param %s! \n" %sys._getframe().f_lineno)
+            return False;
+
+    def searchSymbolByID(self,ID):
+        try:
+            self.cu.execute("select stockID from stockMainTable where ID=%d" %ID)
+            l1 = (str(self.cu.fetchall()[0]).replace('(','').replace(",)","").replace("'",''))
+            if len(l1) >= 0:
+                return l1;
+            else:
+                return False;
+        except sqlite3.Error as e:
+            print("ERROR: searchStockMainTable error, please check your param %s! \n" %sys._getframe().f_lineno)
+            return False;
 
 def insertMainTable(dataBasePath):
     url = "http://nufm.dfcfw.com/EM_Finance2014NumericApplication/JS.aspx/JS.aspx?type=ct&st=%28BalFlowMain%29&sr=-1&p=1&ps=50&js=var%20pglwSLMJ={pages:%28pc%29,date:%222014-10-22%22,data:%5B%28x%29%5D}&token=894050c76af8597a853f5b408b759f5d&cmd=C._AB&sty=DCFFITA&rt=47466059"
@@ -262,13 +278,7 @@ def insertMainTable(dataBasePath):
 
             option(parseDataTmp,dataBasePath).insertStockData();
 
-if __name__ == "__main__":
-    dataBasePath = "./.stockMain.db"
-    urlTmp = "http://app.finance.ifeng.com/data/stock/tab_cccb.php?code="#sh600050"
-#    urlTT = "http://app.finance.ifeng.com/data/stock/tab_cccb.php?code=sh600528"
-#    print(getPageCount(urlTT).getPricePercent())
-#    print(pp)
-    pp = []
+def insertAllStockTable(dataBasePath):
     timeD = time.strftime('%Y-%m-%d',time.localtime(time.time())).split('-')
     timeDY = datetime.date.today()-datetime.timedelta(days=1)
     timeN = int(time.strftime('%H:%M:%S',time.localtime(time.time())).split(':')[0])
@@ -283,7 +293,7 @@ if __name__ == "__main__":
         timeC = datetime.date.today()-datetime.timedelta(days=2)
 
     timeTT = int(timeD[1])
-    oth = other()
+    oth = other(dataBasePath)
     Quarter = oth.getQuarter(timeTT);
     QuarterT = Quarter
     startYear = int(timeD[0]) - 1
@@ -291,56 +301,59 @@ if __name__ == "__main__":
 
     maxT = False
 
-#    for i in range (1, 2): # parseUrl(url).getPagesNum()+1):
+    maxID = oth.searchStockMainTable();
+    for i in range(1, maxID+1):
+        stockSymbol = oth.searchSymbolByID(int(i));
+        timeDN = oth.searchMaxTimeStock(stockSymbol)
 
-#            sql = dataBase(dataBasePath) 
-#            conn = sql.connectData()
+        if timeDN: 
+            print("max Time is %s, the latest time is %s" %(timeDN,timeC))
+            timeDN = timeDN.split('-')
+#            print(oth.cmp(timeC, timeDN))
+#            print(timeC, timeDN)
+            if oth.cmp(timeC, timeDN):
+                print('the date is latest!\n')
+                continue;
 
-            stockSymbol = parseDataTmp[0]
+            QuarterT = oth.getQuarter(int(timeDN[1]))
+            startYear = int(str(timeDN[0]).replace("'",''));
+            maxT = True
 
+        for y in range(startYear, stopYear):
+            if y == stopYear - 1:
+               if not maxT:
+                    QuarterStart = 1;
+                    QuarterStop = Quarter + 1
+               else:
+                    QuarterStart = QuarterT;
+                    QuarterStop = Quarter + 1
+            elif y < stopYear - 1:
+               if not maxT:
+                    QuarterStart = Quarter;
+                    QuarterStop = 5 
+               else:
+                    QuarterStart = QuarterT;
+                    QuarterStop = 5 
+#            print(startYear, stopYear, QuarterStart, QuarterStop)
 
-            timeDN = oth.searchMaxTimeStock(dataBasePath, stockSymbol)
-            
+            for m in range(QuarterStart, QuarterStop):
+                kAcount = spiderStockPrice(stockSymbol,y,m).getPriceTimeURL()
+#                time.sleep(5)
 
-            if timeDN: 
-                print("max Time is %s, the latest time is %s" %(timeDN,timeC))
-                timeDN = timeDN.split('-')
-#                print(oth.cmp(timeC, timeDN))
-#                print(timeC, timeDN)
-                if oth.cmp(timeC, timeDN):
-                    print('the date is latest!\n')
-                    break;
+                for k in range(0,len(kAcount)):
+                    if timeDN:
+                        if oth.cmp(kAcount[k][0],timeDN):
+                            break;
 
-                QuarterT = oth.getQuarter(int(timeDN[1]))
-                startYear = int(str(timeDN[0]).replace("'",''));
-                maxT = True
+                    if kAcount[k][1]:
+                        dataBase4Stock(dataBasePath, stockSymbol).insert4Stock(kAcount[k][0],kAcount[k][1],kAcount[k][2])
 
-            for y in range(startYear, stopYear):
-                if y == stopYear - 1:
-                   if not maxT:
-                        QuarterStart = 1;
-                        QuarterStop = Quarter + 1
-                   else:
-                        QuarterStart = QuarterT;
-                        QuarterStop = Quarter + 1
-                elif y < stopYear - 1:
-                   if not maxT:
-                        QuarterStart = Quarter;
-                        QuarterStop = 5 
-                   else:
-                        QuarterStart = QuarterT;
-                        QuarterStop = 5 
-#                print(startYear, stopYear, QuarterStart, QuarterStop)
-
-                for m in range(QuarterStart, QuarterStop):
-                    kAcount = spiderStockPrice(stockSymbol,y,m).getPriceTimeURL()
-#                    time.sleep(5)
-
-                    for k in range(0,len(kAcount)):
-                        if timeDN:
-                            if oth.cmp(kAcount[k][0],timeDN):
-                                break;
-
-                        if kAcount[k][1]:
-                            dataBase4Stock(dataBasePath, stockSymbol).insert4Stock(kAcount[k][0],kAcount[k][1],kAcount[k][2])
-
+if __name__ == "__main__":
+    dataBasePath = "./.stockMain.db"
+    urlTmp = "http://app.finance.ifeng.com/data/stock/tab_cccb.php?code="#sh600050"
+#    urlTT = "http://app.finance.ifeng.com/data/stock/tab_cccb.php?code=sh600528"
+#    print(getPageCount(urlTT).getPricePercent())
+#    print(pp)
+    pp = []
+#    insertMainTable(dataBasePath)
+    insertAllStockTable(dataBasePath)
