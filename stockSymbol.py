@@ -182,13 +182,9 @@ class parseUrl(object):
     def getData(self,):
         return self.data;
 
-class other(object):
-    def __init__(self,dataBasePath,):
-        sql = dataBase(dataBasePath) 
-        conn = sql.connectData()
-        self.conn = conn
-        cu = conn.cursor()
-        self.cu = cu
+class others(object):
+    def __init__(self,):
+        pass
 
     def getQuarter(self, time):
         if time >=2 and time <=4:
@@ -200,6 +196,38 @@ class other(object):
         elif time ==1 or time > 10:
             Quarter = 4
         return Quarter;
+
+    def cmp(self, s1, s2):
+        if str(s1).find('-') != -1:
+            s1=str(s1).split('-')
+        if str(s2).find('-') != -1:
+            s2=str(s2).split('-')
+#        print("wo cao %s %s" %(s1,s2))
+#        print(s1[0],s1[1],s1[2],s2[0],s2[1],s2[2])
+        if int(s1[0]) == int(s2[0]) and int(s1[1]) == int(s2[1]) and int(s1[2]) == int(s2[2]): 
+            return True
+        return False
+    def timeCur(self,):
+        timeDY = datetime.date.today()-datetime.timedelta(days=1)
+        timeN = int(time.strftime('%H:%M:%S',time.localtime(time.time())).split(':')[0])
+        if timeN >= 16:
+            timeC = time.strftime('%Y-%m-%d',time.localtime(time.time()))
+        else:
+            timeC = timeDY
+        timeW = datetime.date.today().weekday()
+        if int(timeW) == 5:
+            timeC = datetime.date.today()-datetime.timedelta(days=1)
+        elif int(timeW) == 6:
+            timeC = datetime.date.today()-datetime.timedelta(days=2)
+        return timeC;
+
+class other(object):
+    def __init__(self,dataBasePath,):
+        sql = dataBase(dataBasePath) 
+        conn = sql.connectData()
+        self.conn = conn
+        cu = conn.cursor()
+        self.cu = cu
 
     def searchMaxTimeStock(self,stockSymbol):
         l1 = []
@@ -216,18 +244,6 @@ class other(object):
             print("ERROR: searchMaxTimeStock error, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
         self.conn.close()  
-
-    def cmp(self, s1, s2):
-        if str(s1).find('-') != -1:
-            s1=str(s1).split('-')
-        if str(s2).find('-') != -1:
-            s2=str(s2).split('-')
-#        print("wo cao %s %s" %(s1,s2))
-#        print(s1[0],s1[1],s1[2],s2[0],s2[1],s2[2])
-        if int(s1[0]) == int(s2[0]) and int(s1[1]) == int(s2[1]) and int(s1[2]) == int(s2[2]): 
-            return True
-        return False
-
 
     def searchStockMainTable(self,):
         try:
@@ -253,6 +269,37 @@ class other(object):
             print("ERROR: searchStockMainTable error, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
 
+    def searchSymbolPrice(self,stockSymbol, id):
+        try:
+            self.cu.execute("select price from %s where id='%s'" %(stockSymbol,id))
+            l1 = (str(self.cu.fetchall()[0]).replace('(','').replace(",)","").replace("'",''))
+            if len(l1) >= 0:
+                return l1;
+            else:
+                return False;
+        except sqlite3.Error as e:
+            print("ERROR: searchSymbolPrice error, please check your param %s! \n" %sys._getframe().f_lineno)
+            return False;
+# need to write something
+    def searchHalfYearMaxValue(self,stockSymbol):
+        try:
+            self.cu.execute("select max(ID) from %s" %stockSymbol)
+            maxID = (str(self.cu.fetchall()[0]).replace('(','').replace(",)","").replace("'",''))
+            maxPrice = int(self.searchSymbolPrice(stockSymbol, 1))
+            for id in range(2,maxID+1):
+                if maxPrice < int(self.searchSymbolPrice(stockSymbol, id))
+                    maxPrice = int(self.searchSymbolPrice(stockSymbol, id))
+                
+
+            if len(l1) >= 0:
+                return l1;
+            else:
+                return False;
+        except sqlite3.Error as e:
+            print("ERROR: searchHalfYearMaxValue error, please check your param %s! \n" %sys._getframe().f_lineno)
+            return False;
+        pass
+        
 def insertMainTable(dataBasePath):
     url = "http://nufm.dfcfw.com/EM_Finance2014NumericApplication/JS.aspx/JS.aspx?type=ct&st=%28BalFlowMain%29&sr=-1&p=1&ps=50&js=var%20pglwSLMJ={pages:%28pc%29,date:%222014-10-22%22,data:%5B%28x%29%5D}&token=894050c76af8597a853f5b408b759f5d&cmd=C._AB&sty=DCFFITA&rt=47466059"
 
@@ -280,21 +327,12 @@ def insertMainTable(dataBasePath):
 
 def insertAllStockTable(dataBasePath):
     timeD = time.strftime('%Y-%m-%d',time.localtime(time.time())).split('-')
-    timeDY = datetime.date.today()-datetime.timedelta(days=1)
-    timeN = int(time.strftime('%H:%M:%S',time.localtime(time.time())).split(':')[0])
-    if timeN >= 16:
-        timeC = time.strftime('%Y-%m-%d',time.localtime(time.time()))
-    else:
-        timeC = timeDY
-    timeW = datetime.date.today().weekday()
-    if int(timeW) == 5:
-        timeC = datetime.date.today()-datetime.timedelta(days=1)
-    elif int(timeW) == 6:
-        timeC = datetime.date.today()-datetime.timedelta(days=2)
 
     timeTT = int(timeD[1])
     oth = other(dataBasePath)
-    Quarter = oth.getQuarter(timeTT);
+    oths = others()
+    timeC = oths.timeCur() 
+    Quarter = oths.getQuarter(timeTT);
     QuarterT = Quarter
     startYear = int(timeD[0]) - 1
     stopYear = int(timeD[0]) + 1
@@ -311,11 +349,11 @@ def insertAllStockTable(dataBasePath):
             timeDN = timeDN.split('-')
 #            print(oth.cmp(timeC, timeDN))
 #            print(timeC, timeDN)
-            if oth.cmp(timeC, timeDN):
+            if oths.cmp(timeC, timeDN):
                 print('the date is latest!\n')
                 continue;
 
-            QuarterT = oth.getQuarter(int(timeDN[1]))
+            QuarterT = oths.getQuarter(int(timeDN[1]))
             startYear = int(str(timeDN[0]).replace("'",''));
             maxT = True
 
@@ -342,7 +380,7 @@ def insertAllStockTable(dataBasePath):
 
                 for k in range(0,len(kAcount)):
                     if timeDN:
-                        if oth.cmp(kAcount[k][0],timeDN):
+                        if oths.cmp(kAcount[k][0],timeDN):
                             break;
 
                     if kAcount[k][1]:
