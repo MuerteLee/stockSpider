@@ -208,6 +208,22 @@ class others(object):
             return True
         return False
 
+    def timeMonthDate(self, s1, month):
+        if str(s1).find('-') != -1:
+            sT=str(s1).split('-')
+        m = int(sT[1]) + 12 - int(month) + 1
+        if int(m) > 12:
+            mT = m - 12
+            YT = int(sT[0])
+        else:
+            mT = m
+            YT = int(sT[0]) - 1
+
+        sT[0] = YT
+        sT[1] = mT
+        sT = (''.join(str(i)+'-'for i in sT)[:-1])
+        return sT 
+
     def timeDf(self, s1, s2):
         if str(s1).find('-') == -1 or str(s2).find('-') == -1:
             return False
@@ -233,9 +249,8 @@ class others(object):
             timeC = datetime.date.today()-datetime.timedelta(days=2)
         return timeC;
 
-    def insertStockTable(dataBasePath,stockSymbol):
+    def insertStockTable(self,dataBasePath, stockSymbol,timeDN):
         timeD = time.strftime('%Y-%m-%d',time.localtime(time.time())).split('-')
-
         timeTT = int(timeD[1])
         oth = other(dataBasePath)
         oths = others()
@@ -247,15 +262,10 @@ class others(object):
 
         maxT = False
 
-
         if timeDN: 
-            print("max Time is %s, the latest time is %s" %(timeDN,timeC))
             timeDN = timeDN.split('-')
-#            print(oth.cmp(timeC, timeDN))
-#            print(timeC, timeDN)
             if oths.cmp(timeC, timeDN):
-                print('the date is latest!\n')
-                continue;
+                return
 
             QuarterT = oths.getQuarter(int(timeDN[1]))
             startYear = int(str(timeDN[0]).replace("'",''));
@@ -288,6 +298,7 @@ class others(object):
                             break;
 
                     if kAcount[k][1]:
+                        print(kAcount[k])
                         dataBase4Stock(dataBasePath, stockSymbol).insert4Stock(kAcount[k][0],kAcount[k][1],kAcount[k][2])
 
 class other(object):
@@ -314,6 +325,22 @@ class other(object):
             print("ERROR: searchMaxTimeStock error, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
         self.conn.close()  
+
+    def searchStockStockIDByPrice(self,):
+        l1=[]
+        try:
+            cmdLine = "select stockID from stockMainTable where priceCur=0.0"
+            self.cu.execute(cmdLine)
+            print(cmdLine)
+            l1 = (str(self.cu.fetchall()))#.replace('(','').replace(",)","").replace("'",''))
+            print(l1)
+            if len(l1) >= 0:
+                return l1;
+            else:
+                return False;
+        except sqlite3.Error as e:
+            print("ERROR: searchStockStockIDByPrice error, please check your param %s! \n" %sys._getframe().f_lineno)
+            return False;
 
     def searchStockMaxID(self,stockSymbol):
         try:
@@ -343,35 +370,37 @@ class other(object):
         try:
             self.cu.execute("select price,time from %s where id='%s'" %(stockSymbol,id))
             l1 = (str(self.cu.fetchall()[0]).replace('(','').replace(",)","").replace("'",'').replace(')','').strip().split(','))
-            print(l1)
+#            print(l1)
             if len(l1) >= 0:
                 return l1;
-            else:
-                return False;
         except sqlite3.Error as e:
             print("ERROR: searchSymbolPriceTime error, please check your param %s! \n" %sys._getframe().f_lineno)
-            return False;
-# need to write something
+
     def searchHalfYearMaxValue(self,stockSymbol):
+        timeN = int(time.strftime('%H:%M:%S',time.localtime(time.time())).split(':')[0])
         oths = others()
         timeC = oths.timeCur();
+
         maxTime = self.searchMaxTimeStock(stockSymbol)
         maxID = self.searchStockMaxID(stockSymbol);
         maxPrice = float(self.searchSymbolPriceTime(stockSymbol, 1)[0])
         pt=[]
         try:
+#            print(timeC,maxTime)
+#            print(stockSymbol)
+            if not oths.cmp(timeC, maxTime):
+                oths.insertStockTable(self.dataBasePath, stockSymbol,maxTime)
+
             if oths.timeDf(timeC, maxTime):
                 for id in range(2,maxID+1):
-                    if maxPrice < int(self.searchSymbolPrice(stockSymbol, id)):
-                        maxPrice = int(self.searchSymbolPrice(stockSymbol, id))
-            else:
-                oths.insertStockTable(self.dataBasePath,stockSymbol)
-                self.searchHalfYearMaxValue(stockSymbol)
+                    pt = self.searchSymbolPriceTime(stockSymbol, id)
+                    if(pt[1],oths.timeMonthDate(timeC, 6)):
+                        if maxPrice < float(pt[0]):
+                            maxPrice = float(pt[0])
             return maxPrice
         except sqlite3.Error as e:
             print("ERROR: searchHalfYearMaxValue error, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
-        pass
         
 def insertMainTable(dataBasePath):
     url = "http://nufm.dfcfw.com/EM_Finance2014NumericApplication/JS.aspx/JS.aspx?type=ct&st=%28BalFlowMain%29&sr=-1&p=1&ps=50&js=var%20pglwSLMJ={pages:%28pc%29,date:%222014-10-22%22,data:%5B%28x%29%5D}&token=894050c76af8597a853f5b408b759f5d&cmd=C._AB&sty=DCFFITA&rt=47466059"
@@ -411,20 +440,27 @@ def insertAllStockTable(dataBasePath):
     stopYear = int(timeD[0]) + 1
 
     maxT = False
-
+    oth.searchStockStockIDByPrice()
+    oooo
+    skipSymbol=['sz300435','sz002749']
     maxID = oth.searchStockMaxID('stockMainTable');
+    
     for i in range(1, maxID+1):
         stockSymbol = oth.searchSymbolByID(int(i));
         timeDN = oth.searchMaxTimeStock(stockSymbol)
-        print(oth.searchSymbolPrice(stockSymbol,1))
-        ooooo
+
+#        oths.insertStockTable(dataBasePath, stockSymbol)
+    
+#        oth.searchHalfYearMaxValue('sz300435')
+        if str(stockSymbol) != 'sz300435':
+            print(stockSymbol)
+            oth.searchHalfYearMaxValue(stockSymbol)
+
         if timeDN: 
-            print("max Time is %s, the latest time is %s" %(timeDN,timeC))
+#            print("max Time is %s, the latest time is %s" %(timeDN,timeC))
             timeDN = timeDN.split('-')
-#            print(oth.cmp(timeC, timeDN))
-#            print(timeC, timeDN)
             if oths.cmp(timeC, timeDN):
-                print('the date is latest!\n')
+#                print('the date is latest!\n')
                 continue;
 
             QuarterT = oths.getQuarter(int(timeDN[1]))
@@ -462,10 +498,5 @@ def insertAllStockTable(dataBasePath):
 
 if __name__ == "__main__":
     dataBasePath = "./.stockMain.db"
-    urlTmp = "http://app.finance.ifeng.com/data/stock/tab_cccb.php?code="#sh600050"
-#    urlTT = "http://app.finance.ifeng.com/data/stock/tab_cccb.php?code=sh600528"
-#    print(getPageCount(urlTT).getPricePercent())
-#    print(pp)
-    pp = []
 #    insertMainTable(dataBasePath)
     insertAllStockTable(dataBasePath)
