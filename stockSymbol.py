@@ -84,15 +84,21 @@ class spiderStockPrice(object):
         #print(str(self.mainData[0]).replace('\t','').replace('\r\n','').split('</tr>')[0])
         # the latest data
         #str(self.mainData[0]).replace('\t','').replace('\r\n','').split('</tr>')[0].split('<td class="tdr">')[0].replace('</div></td>','').split('<td><div align="center">');
+
         for i in range(0, len(self.mainData)):
-            dataT = str(self.mainData[i]).replace('\t','').replace('\r\n','').split('</tr>')[0].split('<td class="tdr">')[0].replace('</div></td>','').split('<td><div align="center">');
-            price = dataT[-1]
+#            dataT = str(self.mainData[i]).replace('\t','').replace('\r\n','').split('</tr>')[0].split('<td class="tdr">')[0].replace('</div></td>','').split('<td><div align="center">');
+            dataT = str(self.mainData[i]).replace('\t','').replace('\r\n','').split('</tr>')[0].replace('<td class="tdr">','').replace('</div></td>','').replace('<div align="center">',',').replace('<td>','').strip().split(',')
+            price = dataT[3]
             dataTU = str(dataT[0]).strip('\'').strip('</a>').split('\'>')
             time = dataTU[1]
             URL = dataTU[0]
+            TA = dataT[-1]
+            V = dataT[-2]
             PTRT.append(time)
             PTRT.append(price)
             PTRT.append(URL)
+            PTRT.append(V)
+            PTRT.append(TA)
             PTR.append(PTRT)
             PTRT=[]
         return PTR
@@ -109,7 +115,7 @@ class dataBase4Stock(dataBase):
         self.cu = cu
     
         if not dataBaseOperator(conn, stockSymbol).searchStockTable(): 
-           cmdLine = "create table " + self.stockSymbol + "(id integer primary key autoincrement, time varchar(128) UNIQUE, price float, URL varchar(128) UNIQUE)"
+           cmdLine = "create table " + self.stockSymbol + "(id integer primary key autoincrement, time varchar(128) UNIQUE, price float, URL varchar(128) UNIQUE, Volume varchar(128), transactionAmount varchar(128)"
            print(cmdLine)
            try:
                 cu.execute(cmdLine)
@@ -130,16 +136,18 @@ class dataBase4Stock(dataBase):
             else:
                 return False;
         except sqlite3.Error as e:
-            print("ERROR: searchStock error -------->>>>>>>, please check your param %s! \n" %sys._getframe().f_lineno)
+            print("ERROR: searchStock error, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
         self.conn.close()  
 
-    def insert4Stock(self, date, price, URL):
+    def insert4Stock(self, date, price, URL, v, ta):
         self.date = date;
         self.price = price;
         self.url = URL;
+        self.Volume = v;
+        self.transactionAmount = ta
         
-        cmdLineInsert = "insert into " + self.stockSymbol +" values((select max(ID) from " + self.stockSymbol + ")+1," + '"' + self.date + '"' + "," + '"' + self.price + '"' + "," + '"' + self.url + '"' + ")"
+        cmdLineInsert = "insert into " + self.stockSymbol +" values((select max(ID) from " + self.stockSymbol + ")+1," + '"' + self.date + '"' + "," + '"' + self.price + '"' + "," + '"' + self.url + '"' + "," + '"'+self.Volume+'"'+ "," + '"' + self.transactionAmount + '"'+")"
         print("Insert stock data: %s" %cmdLineInsert)
 
         if not self.searchStock(date):
@@ -148,7 +156,7 @@ class dataBase4Stock(dataBase):
                 self.cu.execute(cmdLineInsert)
                 self.conn.commit()
             except:
-                print("Please check insert4Stock!\n")
+                print("Please check insert4Stock %s! \n" %sys._getframe().f_lineno)
 
 class option(dataBase):
     def __init__(self, data, dataBasePath):
@@ -290,7 +298,6 @@ class others(object):
 
             for m in range(QuarterStart, QuarterStop):
                 kAcount = spiderStockPrice(stockSymbol,y,m).getPriceTimeURL()
-#                time.sleep(5)
 
                 for k in range(0,len(kAcount)):
                     if timeDN:
@@ -298,8 +305,7 @@ class others(object):
                             break;
 
                     if kAcount[k][1]:
-                        print(kAcount[k])
-                        dataBase4Stock(dataBasePath, stockSymbol).insert4Stock(kAcount[k][0],kAcount[k][1],kAcount[k][2])
+                        dataBase4Stock(dataBasePath, stockSymbol).insert4Stock(kAcount[k][0],kAcount[k][1],kAcount[k][2],kAcount[k][3],kAcount[k][4])
 
 class other(object):
     def __init__(self,dataBasePath):
@@ -326,6 +332,34 @@ class other(object):
             return False;
         self.conn.close()  
 
+    def update(self, stockSymbol, updateKey,keyValue, time, timeValue):
+        cmdLine = "UPDATE " + stockSymbol + " SET " + updateKey +"='"+ keyValue + "' where " + time + "='" + timeValue + "'"
+        print(cmdLine)
+        try:
+            self.cu.execute(cmdLine)
+            self.conn.commit()
+        except sqlite3.Error as e:
+            print("ERROR: update error, please check your param %s! \n" %sys._getframe().f_lineno)
+            self.conn.rollback()
+            return False;
+
+    def searchStock(self,stockSymbol, name, time,timeValue):
+        l1=[]
+        try:
+            cmdLine = "select " + name + " from " + stockSymbol + " where "+time + "='"+ timeValue +"'"
+            self.cu.execute(cmdLine)
+            print(cmdLine)
+            l1 = (str(self.cu.fetchall()).replace('(','').replace(",)","").replace("'",''))
+#            print(l1)
+            if len(l1) >= 0:
+                if l1[1:-1] == "None":
+                    return False
+                return True;
+            else:
+                return False;
+        except sqlite3.Error as e:
+#            print("ERROR: searchStock error, please check your param %s! \n" %sys._getframe().f_lineno)
+            return False;
     def searchStockStockIDByPrice(self,):
         l1=[]
         try:
@@ -341,6 +375,29 @@ class other(object):
         except sqlite3.Error as e:
             print("ERROR: searchStockStockIDByPrice error, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
+
+    def insertColumn(self,stockSymbol,columnName):
+        cmdLine = "alter table "+stockSymbol+" add " + columnName + " varchar"
+        print(cmdLine)
+        try:
+            self.cu.execute(cmdLine)
+            return True
+        except sqlite3.Error as e:
+            print("ERROR: insertColumn error, please check your param %s! \n" %sys._getframe().f_lineno)
+            return False;
+
+    def searchStockColumnIndex(self,stockSymbol,columnName):
+        try:
+            self.cu.execute("select %s from %s" %(columnName,stockSymbol))
+            l1 = self.cu.fetchall()
+            if len(l1) >= 0:
+                return True;
+            else:
+                return False;
+        except sqlite3.Error as e:
+#            print("ERROR: searchStockColumnIndex error, please check your param %s! \n" %sys._getframe().f_lineno)
+            return False;
+
 
     def searchStockMaxID(self,stockSymbol):
         try:
@@ -440,8 +497,12 @@ def insertAllStockTable(dataBasePath):
     stopYear = int(timeD[0]) + 1
 
     maxT = False
-    oth.searchStockStockIDByPrice()
-    oooo
+
+# update table key value
+
+
+#    oth.searchStockStockIDByPrice()
+#    oooo
     skipSymbol=['sz300435','sz002749']
     maxID = oth.searchStockMaxID('stockMainTable');
     
@@ -449,12 +510,17 @@ def insertAllStockTable(dataBasePath):
         stockSymbol = oth.searchSymbolByID(int(i));
         timeDN = oth.searchMaxTimeStock(stockSymbol)
 
+        if not oth.searchStockColumnIndex(stockSymbol,'transactionAmount'):
+            oth.insertColumn(stockSymbol,'transactionAmount')
+
+        if not oth.searchStockColumnIndex(stockSymbol,'Volume'):
+            oth.insertColumn(stockSymbol,'Volume')
+
 #        oths.insertStockTable(dataBasePath, stockSymbol)
     
 #        oth.searchHalfYearMaxValue('sz300435')
-        if str(stockSymbol) != 'sz300435':
-            print(stockSymbol)
-            oth.searchHalfYearMaxValue(stockSymbol)
+#        if str(stockSymbol) != 'sz300435':
+#            oth.searchHalfYearMaxValue(stockSymbol)
 
         if timeDN: 
 #            print("max Time is %s, the latest time is %s" %(timeDN,timeC))
@@ -486,7 +552,6 @@ def insertAllStockTable(dataBasePath):
 
             for m in range(QuarterStart, QuarterStop):
                 kAcount = spiderStockPrice(stockSymbol,y,m).getPriceTimeURL()
-#                time.sleep(5)
 
                 for k in range(0,len(kAcount)):
                     if timeDN:
@@ -494,7 +559,14 @@ def insertAllStockTable(dataBasePath):
                             break;
 
                     if kAcount[k][1]:
-                        dataBase4Stock(dataBasePath, stockSymbol).insert4Stock(kAcount[k][0],kAcount[k][1],kAcount[k][2])
+                        dataBase4Stock(dataBasePath, stockSymbol).insert4Stock(kAcount[k][0],kAcount[k][1],kAcount[k][2],kAcount[k][3],kAcount[k][4])
+
+                    if not oth.searchStock(stockSymbol,'Volume','time', kAcount[k][0]):
+                        oth.update(stockSymbol,'Volume',kAcount[k][3],'time', kAcount[k][0])
+
+                    if not oth.searchStock(stockSymbol,'transactionAmount','time', kAcount[k][0]):
+                        oth.update(stockSymbol,'transactionAmount',kAcount[k][4],'time', kAcount[k][0])
+
 
 if __name__ == "__main__":
     dataBasePath = "./.stockMain.db"
