@@ -115,7 +115,7 @@ class dataBase4Stock(dataBase):
         self.cu = cu
     
         if not dataBaseOperator(conn, stockSymbol).searchStockTable(): 
-           cmdLine = "create table " + self.stockSymbol + "(id integer primary key autoincrement, time varchar(128) UNIQUE, price float, URL varchar(128) UNIQUE, Volume varchar(128), transactionAmount varchar(128)"
+           cmdLine = "create table " + self.stockSymbol + "(id integer primary key autoincrement, time varchar(128) UNIQUE, price float, URL varchar(128) UNIQUE, Volume varchar(128), transactionAmount varchar(128))"
            print(cmdLine)
            try:
                 cu.execute(cmdLine)
@@ -510,11 +510,11 @@ def insertAllStockTable(dataBasePath):
         stockSymbol = oth.searchSymbolByID(int(i));
         timeDN = oth.searchMaxTimeStock(stockSymbol)
 
-        if not oth.searchStockColumnIndex(stockSymbol,'transactionAmount'):
-            oth.insertColumn(stockSymbol,'transactionAmount')
+#        if not oth.searchStockColumnIndex(stockSymbol,'transactionAmount'):
+#            oth.insertColumn(stockSymbol,'transactionAmount')
 
-        if not oth.searchStockColumnIndex(stockSymbol,'Volume'):
-            oth.insertColumn(stockSymbol,'Volume')
+#       if not oth.searchStockColumnIndex(stockSymbol,'Volume'):
+#            oth.insertColumn(stockSymbol,'Volume')
 
 #        oths.insertStockTable(dataBasePath, stockSymbol)
     
