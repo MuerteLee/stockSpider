@@ -94,11 +94,17 @@ class spiderStockPrice(object):
             URL = dataTU[0]
             TA = dataT[-1]
             V = dataT[-2]
+            startPrice = dataT[-6]
+            priceH = dataT[-5]
+            priceL = dataT[-3]
             PTRT.append(time)
             PTRT.append(price)
             PTRT.append(URL)
             PTRT.append(V)
             PTRT.append(TA)
+            PTRT.append(startPrice)
+            PTRT.append(priceH)
+            PTRT.append(priceL)
             PTR.append(PTRT)
             PTRT=[]
         return PTR
@@ -115,7 +121,7 @@ class dataBase4Stock(dataBase):
         self.cu = cu
     
         if not dataBaseOperator(conn, stockSymbol).searchStockTable(): 
-           cmdLine = "create table " + self.stockSymbol + "(id integer primary key autoincrement, time varchar(128) UNIQUE, price float, URL varchar(128) UNIQUE, Volume varchar(128), transactionAmount varchar(128))"
+           cmdLine = "create table " + self.stockSymbol + "(id integer primary key autoincrement, time varchar(128) UNIQUE, price float, URL varchar(128), Volume varchar(128), transactionAmount varchar(128), startPrice varchar(128), priceH varchar(128), priceL varchar(128))"
            print(cmdLine)
            try:
                 cu.execute(cmdLine)
@@ -140,14 +146,17 @@ class dataBase4Stock(dataBase):
             return False;
         self.conn.close()  
 
-    def insert4Stock(self, date, price, URL, v, ta):
+    def insert4Stock(self, date, price, URL, v, ta,startPrice, priceH, priceL):
         self.date = date;
         self.price = price;
         self.url = URL;
         self.Volume = v;
         self.transactionAmount = ta
+        self.startp = startPrice
+        self.ph = priceH
+        self.pl = priceL
         
-        cmdLineInsert = "insert into " + self.stockSymbol +" values((select max(ID) from " + self.stockSymbol + ")+1," + '"' + self.date + '"' + "," + '"' + self.price + '"' + "," + '"' + self.url + '"' + "," + '"'+self.Volume+'"'+ "," + '"' + self.transactionAmount + '"'+")"
+        cmdLineInsert = "insert into " + self.stockSymbol +" values((select max(ID) from " + self.stockSymbol + ")+1," + '"' + self.date + '"' + "," + '"' + self.price + '"' + "," + '"' + self.url + '"' + "," + '"'+self.Volume+'"'+ "," + '"' + self.transactionAmount + '"'+ "," + '"' + self.startp + '"'+ "," + '"' + self.ph + '"'+ "," + '"' + self.pl + '"'+")"
         print("Insert stock data: %s" %cmdLineInsert)
 
         if not self.searchStock(date):
@@ -194,14 +203,30 @@ class others(object):
     def __init__(self,):
         pass
 
+    def returnWeekDay(self, timeD, day):
+        self.day = day
+        self.timeD = timeD
+        loop = True
+        while(loop):
+            timeD1 =  datetime.datetime.strptime(self.timeD,'%Y-%m-%d') + datetime.timedelta(days=self.day)
+            timeD1T = str(timeD1).split('-')
+            timeD1T[2] = timeD1T[2][:-8]
+            w = int(datetime.datetime(int(timeD1T[0]),int(timeD1T[1]),int(timeD1T[2])).strftime("%w"));
+            if w >= 1 and w <= 5:
+                loop = False
+            else:
+                self.day = self.day + 1
+
+        return str(timeD1).split(' ')[0]
+
     def getQuarter(self, time):
-        if time >=2 and time <=4:
+        if time >=1 and time <=3:
             Quarter = 1
-        elif time >=5 and time <=7:
+        elif time >=4 and time <=6:
             Quarter = 2
-        elif time >=8 and time <=10:
+        elif time >=7 and time <=9:
             Quarter = 3
-        elif time ==1 or time > 10:
+        elif time >=10 or time <= 12:
             Quarter = 4
         return Quarter;
 
@@ -458,7 +483,7 @@ class other(object):
         except sqlite3.Error as e:
             print("ERROR: searchHalfYearMaxValue error, please check your param %s! \n" %sys._getframe().f_lineno)
             return False;
-        
+    
 def insertMainTable(dataBasePath):
     url = "http://nufm.dfcfw.com/EM_Finance2014NumericApplication/JS.aspx/JS.aspx?type=ct&st=%28BalFlowMain%29&sr=-1&p=1&ps=50&js=var%20pglwSLMJ={pages:%28pc%29,date:%222014-10-22%22,data:%5B%28x%29%5D}&token=894050c76af8597a853f5b408b759f5d&cmd=C._AB&sty=DCFFITA&rt=47466059"
 
@@ -483,7 +508,7 @@ def insertMainTable(dataBasePath):
             del parseDataTmp[0]
 
             option(parseDataTmp,dataBasePath).insertStockData();
-
+ 
 def insertAllStockTable(dataBasePath):
     timeD = time.strftime('%Y-%m-%d',time.localtime(time.time())).split('-')
 
@@ -559,7 +584,7 @@ def insertAllStockTable(dataBasePath):
                             break;
 
                     if kAcount[k][1]:
-                        dataBase4Stock(dataBasePath, stockSymbol).insert4Stock(kAcount[k][0],kAcount[k][1],kAcount[k][2],kAcount[k][3],kAcount[k][4])
+                        dataBase4Stock(dataBasePath, stockSymbol).insert4Stock(kAcount[k][0],kAcount[k][1],kAcount[k][2],kAcount[k][3],kAcount[k][4],kAcount[k][5],kAcount[k][6],kAcount[k][7])
 
                     if not oth.searchStock(stockSymbol,'Volume','time', kAcount[k][0]):
                         oth.update(stockSymbol,'Volume',kAcount[k][3],'time', kAcount[k][0])
@@ -568,7 +593,32 @@ def insertAllStockTable(dataBasePath):
                         oth.update(stockSymbol,'transactionAmount',kAcount[k][4],'time', kAcount[k][0])
 
 
+def returnThreeDayDate(timeD,stockSymbol):
+    timeDT=timeD
+    timeD=str(timeD).split('-')
+    timeTT = int(timeD[1])
+    oths = others()
+    Quarter = oths.getQuarter(timeTT);
+
+    kAcount = spiderStockPrice(stockSymbol,int(timeD[0]),Quarter).getPriceTimeURL()
+    timeD1 = (oths.returnWeekDay(timeDT,1))
+    timeD2 = (oths.returnWeekDay(timeD1,1))
+
+    for k in range(0,len(kAcount)):
+        if oths.cmp(kAcount[k][0],timeD):
+            print("Time:%s, stopPrice:%s, transactionAmount:%s" %(kAcount[k][0],kAcount[k][1],kAcount[k][4]))
+
+        if oths.cmp(kAcount[k][0],timeD1):
+            print("Time:%s, startPrice:%s, priceHigh:%s, priceLow:%s" %(kAcount[k][0],kAcount[k][5],kAcount[k][6],kAcount[k][7]))
+
+        if oths.cmp(kAcount[k][0],timeD2):
+            print("Time:%s, stopPrice:%s, priceHigh:%s, priceLow:%s" %(kAcount[k][0],kAcount[k][1],kAcount[k][6],kAcount[k][7]))
+    
+
 if __name__ == "__main__":
     dataBasePath = "./.stockMain.db"
 #    insertMainTable(dataBasePath)
-    insertAllStockTable(dataBasePath)
+#    insertAllStockTable(dataBasePath)
+
+#    returnThreeDayDate('2015-03-23','sz300383');
+    returnThreeDayDate('2015-01-05','sz002608');
