@@ -220,13 +220,13 @@ class others(object):
         return str(timeD1).split(' ')[0]
 
     def getQuarter(self, time):
-        if time >=2 and time <=4:
+        if time >=1 and time <=3:
             Quarter = 1
-        elif time >=5 and time <=7:
+        elif time >=4 and time <=6:
             Quarter = 2
-        elif time >=8 and time <=10:
+        elif time >=7 and time <=9:
             Quarter = 3
-        elif time ==1 or time > 10:
+        elif time >=10 or time <= 12:
             Quarter = 4
         return Quarter;
 
@@ -619,4 +619,6 @@ if __name__ == "__main__":
     dataBasePath = "./.stockMain.db"
 #    insertMainTable(dataBasePath)
 #    insertAllStockTable(dataBasePath)
-    returnThreeDayDate('2015-03-23','sz300383');
+
+#    returnThreeDayDate('2015-03-23','sz300383');
+    returnThreeDayDate('2015-01-05','sz002608');
