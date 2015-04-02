@@ -594,15 +594,24 @@ def insertAllStockTable(dataBasePath):
 
 
 def returnThreeDayDate(timeD,stockSymbol):
+    kAcountT = []
     timeDT=timeD
     timeD=str(timeD).split('-')
     timeTT = int(timeD[1])
     oths = others()
     Quarter = oths.getQuarter(timeTT);
-
+    
     kAcount = spiderStockPrice(stockSymbol,int(timeD[0]),Quarter).getPriceTimeURL()
+
     timeD1 = (oths.returnWeekDay(timeDT,1))
     timeD2 = (oths.returnWeekDay(timeD1,1))
+    if int(oths.getQuarter(int(str(timeD2).split('-')[1]))) > int(Quarter) or int(oths.getQuarter(int(str(timeD1).split('-')[1]))) > int(Quarter):
+        if int(oths.getQuarter(int(str(timeD2).split('-')[1]))) != int(oths.getQuarter(int(str(timeD1).split('-')[1]))):
+            kAcountT = spiderStockPrice(stockSymbol,int(str(timeD2).split('-')[0]),oths.getQuarter(int(str(timeD2).split('-')[1]))).getPriceTimeURL()
+        else:
+            kAcountT = spiderStockPrice(stockSymbol,int(str(timeD1).split('-')[0]),oths.getQuarter(int(str(timeD1).split('-')[1]))).getPriceTimeURL()
+
+    kAcount = kAcountT + kAcount
 
     for k in range(0,len(kAcount)):
         if oths.cmp(kAcount[k][0],timeD):
@@ -621,4 +630,4 @@ if __name__ == "__main__":
 #    insertAllStockTable(dataBasePath)
 
 #    returnThreeDayDate('2015-03-23','sz300383');
-    returnThreeDayDate('2015-01-05','sz002608');
+    returnThreeDayDate('2015-03-30','sz002608');
